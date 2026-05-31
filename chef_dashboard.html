@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrimeShot — Chef Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #020408;
+  --deep: #060d14;
+  --surface: #0a1420;
+  --panel: #0e1d2e;
+  --rim: #132540;
+  --line: #1a3050;
+  --muted: #2a4060;
+  --text3: #3d6080;
+  --text2: #6a90b0;
+  --text1: #a8c8e0;
+  --snow: #e8f4ff;
+  --plasma: #00e5ff;
+  --plasma-dim: rgba(0,229,255,.08);
+  --gold: #ffd060;
+  --ember: #ff5040;
+  --jade: #00e5a0;
+  --jade-dim: rgba(0,229,160,.08);
+  --r: 6px;
+  --r-lg: 12px;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--void); color: var(--snow); min-height: 100vh; padding: 1.5rem; }
+body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px), linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+#app { position:relative; z-index:1; max-width:1200px; margin:0 auto; }
+
+header { display:flex; align-items:center; justify-content:space-between; padding:1rem 0; border-bottom:1px solid var(--line); margin-bottom:1.5rem; }
+.logo { font-family:var(--mono); font-size:11px; letter-spacing:.15em; color:var(--text2); }
+.logo em { color:var(--plasma); font-style:normal; }
+.live { display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10px; color:var(--jade); }
+.pulse { width:6px; height:6px; border-radius:50%; background:var(--jade); box-shadow:0 0 8px var(--jade); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+h1 { font-size:28px; font-weight:800; letter-spacing:.01em; margin-bottom:4px; }
+h1 em { color:var(--plasma); font-style:normal; }
+.sub { font-size:11px; color:var(--text2); font-family:var(--mono); margin-bottom:1.5rem; }
+
+.stats { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:1.5rem; }
+.stat { background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:14px; }
+.stat-val { font-family:var(--mono); font-size:26px; font-weight:700; line-height:1; margin-bottom:5px; }
+.stat-lbl { font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:.12em; font-family:var(--mono); }
+
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1.5rem; }
+
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; }
+.panel-head { padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+.panel-title { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:.1em; font-family:var(--mono); }
+
+.log-row { display:grid; grid-template-columns:70px 80px 1fr 90px; gap:10px; padding:10px 16px; border-bottom:1px solid rgba(26,48,80,.5); font-size:11px; align-items:center; font-family:var(--mono); transition:background .1s; }
+.log-row:hover { background:rgba(10,20,32,.5); }
+.log-row:last-child { border-bottom:none; }
+
+.time { color:var(--text3); font-size:10px; }
+.user-tag { color:var(--plasma); font-size:10px; }
+.detail { color:var(--text1); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.badge { font-size:9px; padding:2px 7px; border-radius:3px; font-family:var(--mono); font-weight:700; text-transform:uppercase; }
+.b-søgning { background:rgba(0,229,255,.1); color:var(--plasma); border:1px solid rgba(0,229,255,.2); }
+.b-mail { background:rgba(0,229,160,.1); color:var(--jade); border:1px solid rgba(0,229,160,.2); }
+.b-pipeline { background:rgba(255,208,96,.1); color:var(--gold); border:1px solid rgba(255,208,96,.2); }
+.b-salg { background:rgba(0,229,160,.2); color:var(--jade); border:1px solid rgba(0,229,160,.4); }
+.b-aftale { background:rgba(160,100,255,.1); color:#c090ff; border:1px solid rgba(160,100,255,.2); }
+.b-support { background:rgba(0,229,255,.05); color:var(--text2); border:1px solid var(--line); }
+.b-feature { background:rgba(255,80,64,.1); color:var(--ember); border:1px solid rgba(255,80,64,.2); }
+
+.support-row { padding:12px 16px; border-bottom:1px solid rgba(26,48,80,.5); font-size:11px; font-family:var(--mono); }
+.support-user { color:var(--plasma); font-size:10px; margin-bottom:4px; }
+.support-msg { color:var(--text1); line-height:1.6; }
+.support-time { color:var(--text3); font-size:9px; margin-top:4px; }
+
+.feature-row { padding:12px 16px; border-bottom:1px solid rgba(26,48,80,.5); display:flex; justify-content:space-between; align-items:center; }
+.feature-txt { font-size:12px; color:var(--snow); }
+.feature-user { font-size:10px; color:var(--text2); font-family:var(--mono); margin-top:3px; }
+
+.empty { text-align:center; padding:2.5rem; color:var(--text3); font-family:var(--mono); font-size:11px; }
+.empty .ico { font-size:1.5rem; margin-bottom:8px; opacity:.3; }
+
+.online-dot { width:8px; height:8px; border-radius:50%; background:var(--jade); display:inline-block; margin-right:4px; animation:pulse 2s infinite; }
+.offline-dot { width:8px; height:8px; border-radius:50%; background:var(--text3); display:inline-block; margin-right:4px; }
+
+.medarbejder-card { padding:12px 16px; border-bottom:1px solid rgba(26,48,80,.5); display:flex; justify-content:space-between; align-items:center; }
+.med-name { font-size:13px; font-weight:700; }
+.med-meta { font-size:10px; color:var(--text2); font-family:var(--mono); margin-top:3px; }
+.med-status { font-size:10px; font-family:var(--mono); }
+
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--muted); border-radius:2px; }
+
+.refresh-btn { font-size:10px; font-family:var(--mono); padding:4px 10px; background:transparent; border:1px solid var(--line); color:var(--text2); border-radius:4px; cursor:pointer; transition:all .15s; }
+.refresh-btn:hover { border-color:var(--plasma); color:var(--plasma); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="logo">PRIME<em>SHOT</em> · <em>CHEF</em> DASHBOARD · v1.0</div>
+  <div style="display:flex;align-items:center;gap:1.5rem">
+    <div class="live"><div class="pulse"></div>LIVE · opdaterer hvert 5 sek</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--plasma)" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<h1>Overblik · <em>PrimeShot</em></h1>
+<p class="sub">// Du kan se alt hvad dine medarbejdere laver i realtid</p>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-val" style="color:var(--plasma)" id="st-handlinger">0</div>
+    <div class="stat-lbl">Handlinger i dag</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--jade)" id="st-salg">0</div>
+    <div class="stat-lbl">Lukkede salg</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--gold)" id="st-aftaler">0</div>
+    <div class="stat-lbl">Aftaler sendt</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="st-aktive">0</div>
+    <div class="stat-lbl">Aktive nu</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--ember)" id="st-features">0</div>
+    <div class="stat-lbl">Feature requests</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <!-- Medarbejdere -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Medarbejdere</div>
+      <button class="refresh-btn" onclick="render()">↻ Opdater</button>
+    </div>
+    <div id="med-list"><div class="empty"><div class="ico">◎</div>Ingen aktivitet endnu</div></div>
+  </div>
+
+  <!-- Feature Requests -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Feature Requests fra medarbejdere</div>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ember)" id="feat-count"></span>
+    </div>
+    <div id="feat-list" style="max-height:220px;overflow-y:auto"><div class="empty"><div class="ico">◎</div>Ingen requests endnu</div></div>
+  </div>
+</div>
+
+<!-- Aktivitetslog -->
+<div class="panel" style="margin-bottom:1.5rem">
+  <div class="panel-head">
+    <div class="panel-title">Aktivitetslog · Alt hvad medarbejderne laver</div>
+    <div style="display:flex;gap:8px">
+      <button class="refresh-btn" onclick="setFilter('alle')" id="f-alle">Alle</button>
+      <button class="refresh-btn" onclick="setFilter('SØGNING')" id="f-søgning">Søgninger</button>
+      <button class="refresh-btn" onclick="setFilter('MAIL')" id="f-mail">Mails</button>
+      <button class="refresh-btn" onclick="setFilter('SALG')" id="f-salg">Salg</button>
+      <button class="refresh-btn" onclick="setFilter('AFTALE')" id="f-aftale">Aftaler</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:70px 80px 1fr 90px;gap:10px;padding:8px 16px;background:rgba(10,20,32,.8);border-bottom:1px solid var(--line)">
+    <div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Tid</div>
+    <div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Medarbejder</div>
+    <div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Handling</div>
+    <div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Type</div>
+  </div>
+  <div id="log-list" style="max-height:400px;overflow-y:auto"><div class="empty"><div class="ico">◎</div>Ingen aktivitet endnu · Medarbejderne skal bruge botten på samme enhed eller via Netlify</div></div>
+</div>
+
+<!-- AI Support samtaler -->
+<div class="panel" style="margin-bottom:1.5rem">
+  <div class="panel-head">
+    <div class="panel-title">AI Support samtaler · Hvad medarbejderne spørger om</div>
+  </div>
+  <div id="support-list" style="max-height:300px;overflow-y:auto"><div class="empty"><div class="ico">◎</div>Ingen support samtaler endnu</div></div>
+</div>
+
+</div>
+
+<script>
+let activeFilter = 'alle';
+let lastCount = 0;
+
+function getLog() {
+  return JSON.parse(localStorage.getItem('ps_log') || '[]');
+}
+
+function getAftaler() {
+  return JSON.parse(localStorage.getItem('ps_aftaler') || '[]');
+}
+
+function formatTime(iso) {
+  try { return new Date(iso).toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit', second:'2-digit' }); }
+  catch { return '--:--:--'; }
+}
+
+function badgeClass(type) {
+  const map = { 'SØGNING':'b-søgning','MAIL':'b-mail','PIPELINE':'b-pipeline','SALG':'b-salg','AFTALE':'b-aftale','SUPPORT':'b-support','FEATURE-REQUEST':'b-feature' };
+  return map[type] || 'b-support';
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.refresh-btn').forEach(b => b.style.borderColor = '');
+  const btn = document.getElementById('f-' + f.toLowerCase());
+  if (btn) btn.style.borderColor = 'var(--plasma)';
+  render();
+}
+
+function render() {
+  const log = getLog();
+  const aftaler = getAftaler();
+  const today = new Date().toDateString();
+
+  // Stats
+  const todayLog = log.filter(e => new Date(e.time).toDateString() === today);
+  document.getElementById('st-handlinger').textContent = todayLog.length;
+  document.getElementById('st-salg').textContent = log.filter(e => e.type === 'SALG').length;
+  document.getElementById('st-aftaler').textContent = aftaler.length;
+
+  // Aktive medarbejdere (aktivitet inden for 30 min)
+  const now = Date.now();
+  const aktive = new Set(log.filter(e => now - new Date(e.time) < 30*60*1000).map(e => e.user));
+  document.getElementById('st-aktive').textContent = aktive.size;
+
+  // Feature requests
+  const features = log.filter(e => e.type === 'FEATURE-REQUEST');
+  document.getElementById('st-features').textContent = features.length;
+
+  // Medarbejdere
+  const medMap = {};
+  log.forEach(e => {
+    if (!e.user) return;
+    if (!medMap[e.user]) medMap[e.user] = { handlinger: 0, sidst: e.time, salg: 0 };
+    medMap[e.user].handlinger++;
+    if (e.type === 'SALG') medMap[e.user].salg++;
+    if (new Date(e.time) > new Date(medMap[e.user].sidst)) medMap[e.user].sidst = e.time;
+  });
+
+  const medList = document.getElementById('med-list');
+  if (Object.keys(medMap).length === 0) {
+    medList.innerHTML = '<div class="empty"><div class="ico">◎</div>Ingen medarbejdere aktive endnu</div>';
+  } else {
+    medList.innerHTML = Object.entries(medMap).map(([navn, data]) => {
+      const erAktiv = now - new Date(data.sidst) < 30*60*1000;
+      return `<div class="medarbejder-card">
+        <div>
+          <div class="med-name"><span class="${erAktiv ? 'online-dot' : 'offline-dot'}"></span>${navn}</div>
+          <div class="med-meta">${data.handlinger} handlinger · ${data.salg} salg · Sidst aktiv: ${formatTime(data.sidst)}</div>
+        </div>
+        <div class="med-status" style="color:${erAktiv ? 'var(--jade)' : 'var(--text3)'}">${erAktiv ? 'ONLINE' : 'OFFLINE'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Feature requests
+  const featList = document.getElementById('feat-list');
+  document.getElementById('feat-count').textContent = features.length > 0 ? features.length + ' nye' : '';
+  if (features.length === 0) {
+    featList.innerHTML = '<div class="empty"><div class="ico">◎</div>Ingen requests endnu</div>';
+  } else {
+    featList.innerHTML = features.map(e => `
+      <div class="feature-row">
+        <div>
+          <div class="feature-txt">${e.detail}</div>
+          <div class="feature-user">${e.user} · ${formatTime(e.time)}</div>
+        </div>
+        <span class="badge b-feature">NY</span>
+      </div>`).join('');
+  }
+
+  // Aktivitetslog
+  const filtered = activeFilter === 'alle' ? log : log.filter(e => e.type === activeFilter);
+  const logList = document.getElementById('log-list');
+  if (filtered.length === 0) {
+    logList.innerHTML = '<div class="empty"><div class="ico">◎</div>Ingen aktivitet i denne kategori</div>';
+  } else {
+    logList.innerHTML = filtered.slice(0, 100).map(e => `
+      <div class="log-row">
+        <div class="time">${formatTime(e.time)}</div>
+        <div class="user-tag">${(e.user||'?').split(' ')[0].toUpperCase()}</div>
+        <div class="detail">${e.detail || '–'}</div>
+        <div><span class="badge ${badgeClass(e.type)}">${e.type}</span></div>
+      </div>`).join('');
+  }
+
+  // Support samtaler
+  const supportLog = log.filter(e => e.type === 'SUPPORT' || e.type === 'FEATURE-REQUEST');
+  const supportList = document.getElementById('support-list');
+  if (supportLog.length === 0) {
+    supportList.innerHTML = '<div class="empty"><div class="ico">◎</div>Ingen support samtaler endnu</div>';
+  } else {
+    supportList.innerHTML = supportLog.map(e => `
+      <div class="support-row">
+        <div class="support-user">${e.user || 'Ukendt'} <span class="badge ${badgeClass(e.type)}" style="margin-left:6px">${e.type}</span></div>
+        <div class="support-msg">${e.detail}</div>
+        <div class="support-time">${formatTime(e.time)}</div>
+      </div>`).join('');
+  }
+
+  // Notifikation ved ny aktivitet
+  const newCount = log.length;
+  if (newCount > lastCount && lastCount > 0) {
+    document.title = '🔔 Ny aktivitet · Chef Dashboard';
+    setTimeout(() => document.title = 'PrimeShot · Chef Dashboard', 3000);
+  }
+  lastCount = newCount;
+}
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('da-DK');
+}, 1000);
+
+// Auto opdater hvert 5 sekund
+setInterval(render, 5000);
+
+// Init
+render();
+setFilter('alle');
+</script>
+</body>
+</html>
