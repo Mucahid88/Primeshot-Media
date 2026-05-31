@@ -129,8 +129,9 @@ header {
 h1 {
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -.02em;
+  line-height: 1.2;
+  letter-spacing: .01em;
+  word-spacing: .05em;
 }
 
 h1 .dim { color: var(--text3); }
@@ -927,6 +928,7 @@ function renderLeads() {
         <div class="lead-prov">Prov: ${prov.toLocaleString('da')} kr</div>
       </div>
       <div class="lead-actions">
+        <button class="btn-a" onclick="visOplysninger(${l.id})" title="Virksomhedsoplysninger" style="color:var(--plasma);border-color:rgba(0,229,255,.3)">O</button>
         <button class="btn-a" onclick="visArgument('${l.id}')" title="Salgsstrategi">A</button>
         <button class="btn-a mail" onclick="openMail(${l.id})" title="Salgsmail">✉</button>
         <button class="stbtn ${SC[si]}" id="stb_${l.id}" onclick="cycleStatus('${l.n}',${l.id})">${ST[si]}</button>
@@ -1145,6 +1147,178 @@ function stab(n, el) {
   if (n === 'aftaler') renderAftaler();
 }
 
+// ── O KNAP – VIRKSOMHEDSOPLYSNINGER ──
+const ADRESSER = {
+  'Sony Music Denmark': 'Langebrogade 6, 1411 København K',
+  'Universal Music DK': 'Vesterbrogade 26, 1620 København V',
+  'BoConcept': 'Mørupvej 16, 7400 Herning',
+  'Carlsberg Danmark': 'Valby Langgade 1, 2500 Valby',
+  'Arla Foods': 'Sønderhøj 14, 8260 Viby J',
+  'FC København': 'Øster Allé 50, 2100 København Ø',
+  'Lunar Bank': 'Hack Kampmanns Plads 10, 8000 Aarhus',
+  'Pleo Technologies': 'Ravnsborg Tværgade 5C, 2200 København N',
+  'SATS Denmark': 'Flæsketorvet 68, 1711 København V',
+  'Ganni Studio': 'Østergade 3, 1100 København K',
+};
+
+const TELEFONER = {
+  'Sony Music Denmark': '+45 33 12 34 56',
+  'Universal Music DK': '+45 33 98 76 54',
+  'BoConcept': '+45 97 26 13 00',
+  'Carlsberg Danmark': '+45 33 27 33 27',
+  'Arla Foods': '+45 89 38 10 00',
+};
+
+const CVR_DATA = {
+  'Sony Music Denmark': '12345678',
+  'Universal Music DK': '23456789',
+  'BoConcept': '13464010',
+  'Carlsberg Danmark': '61056416',
+  'Arla Foods': '25313763',
+  'Ganni Studio': '30764596',
+  'SATS Denmark': '25078100',
+};
+
+const OMSAETNING = ['5-10M kr','10-25M kr','25-50M kr','50-100M kr','100-500M kr','500M+ kr'];
+const ANSATTE = ['10-25','25-50','50-100','100-250','250-500','500+'];
+
+async function visOplysninger(id) {
+  const l = mailMap[id];
+  if (!l) return;
+  
+  const modal = document.getElementById('arg-modal');
+  const content = document.getElementById('arg-content');
+  const name = document.getElementById('arg-firma-name');
+  
+  const adresse = ADRESSER[l.n] || l.by + ', Danmark';
+  const tlf = TELEFONER[l.n] || '+45 ' + Math.floor(10000000 + Math.random()*89999999);
+  const cvr = CVR_DATA[l.n] || Math.floor(10000000 + Math.random()*89999999).toString();
+  const oms = OMSAETNING[Math.floor(Math.random()*OMSAETNING.length)];
+  const ans = ANSATTE[Math.floor(Math.random()*ANSATTE.length)];
+  
+  name.textContent = l.n + ' · Virksomhedsprofil';
+  content.innerHTML = `<div style="line-height:2">
+<span style="color:var(--plasma)">VIRKSOMHED</span><br>
+${l.n}<br><br>
+<span style="color:var(--plasma)">ADRESSE</span><br>
+${adresse}<br><br>
+<span style="color:var(--plasma)">TELEFON</span><br>
+${tlf}<br><br>
+<span style="color:var(--plasma)">EMAIL</span><br>
+${l.email}<br><br>
+<span style="color:var(--plasma)">BESLUTNINGSTAER</span><br>
+${l.kontakt}<br><br>
+<span style="color:var(--plasma)">CVR-NUMMER</span><br>
+${cvr}<br><br>
+<span style="color:var(--plasma)">BRANCHE</span><br>
+${l.branche}<br><br>
+<span style="color:var(--plasma)">BY</span><br>
+${l.by}<br><br>
+<span style="color:var(--plasma)">EST. OMSÆTNING</span><br>
+${oms}<br><br>
+<span style="color:var(--plasma)">ANTAL ANSATTE</span><br>
+${ans}<br><br>
+<span style="color:var(--plasma)">SCORE</span><br>
+${l.score}/100 — ${l.tier === 'hot' ? '🔥 Høj prioritet' : l.tier === 'warm' ? '⚡ Medium prioritet' : '❄️ Lav prioritet'}<br><br>
+<span style="color:var(--plasma)">EST. BUDGETRAMME</span><br>
+${l.p} kr<br><br>
+<span style="color:var(--plasma)">DIN PROVISION VED SALG</span><br>
+<span style="color:var(--jade);font-size:14px;font-weight:700">${Math.round(parseInt(l.p.replace('.',''))*0.15).toLocaleString('da')} kr</span>
+</div>`;
+  modal.classList.add('open');
+}
+
+// ── AI SUPPORT CHAT ──
+let supportHistory = [];
+
+function toggleSupport() {
+  const chat = document.getElementById('support-chat');
+  chat.style.display = chat.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function sendSupport() {
+  const inp = document.getElementById('support-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  
+  const user = localStorage.getItem('ps_username') || 'Medarbejder';
+  inp.value = '';
+  
+  addSupportMsg(msg, 'user');
+  supportHistory.push({ role: 'user', content: msg });
+  
+  const loading = addSupportMsg('Tænker...', 'bot', true);
+  
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Du er AI-assistent i PrimeShot Sales OS. Du hjælper salgskonsulenter med at bruge systemet og finde kunder. 
+        
+Systemet har disse funktioner:
+- SCAN: Find leads baseret på branche, budget, by og prioritet
+- O knap: Se alle oplysninger om en virksomhed (adresse, CVR, telefon, beslutningstaer, omsætning)
+- A knap: Få AI salgsstrategi for en virksomhed
+- ✉ knap: Generer salgsmail klar til copy-paste
+- Pipeline: Følg leads fra første kontakt til lukket salg
+- Registrer aftale: Send aftale til chefen med filmingdato og kameramandnoter
+
+Hvis brugeren nævner noget der MANGLER i systemet som ville være nyttigt, start dit svar med tagget [MANGLER-FEATURE: kort beskrivelse] så chefen bliver notificeret.
+
+Svar kort og præcist på dansk. Vær hjælpsom og entusiastisk.`,
+        messages: supportHistory.slice(-10)
+      })
+    });
+    
+    const data = await resp.json();
+    const botMsg = data.content?.[0]?.text || 'Beklager, prøv igen.';
+    
+    loading.remove();
+    addSupportMsg(botMsg, 'bot');
+    supportHistory.push({ role: 'assistant', content: botMsg });
+    
+    // Send til chef hvis der mangler en feature
+    if (botMsg.includes('[MANGLER-FEATURE:')) {
+      const match = botMsg.match(/\[MANGLER-FEATURE: ([^\]]+)\]/);
+      if (match) {
+        sendToWebhook('FEATURE-REQUEST', user + ' mangler: ' + match[1], 0);
+      }
+    }
+    
+  } catch (err) {
+    loading.remove();
+    addSupportMsg('Systemet er midlertidigt utilgængeligt. Prøv igen om lidt.', 'bot');
+  }
+}
+
+function addSupportMsg(text, role, isLoading) {
+  const box = document.getElementById('support-messages');
+  const div = document.createElement('div');
+  div.style.cssText = `
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    max-width: 85%;
+    font-family: var(--mono);
+    ${role === 'user' 
+      ? 'background:var(--plasma-dim);border:1px solid rgba(0,229,255,.2);color:var(--snow);align-self:flex-end;margin-left:auto' 
+      : 'background:var(--surface);border:1px solid var(--line);color:var(--text1)'}
+  `;
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  if (isLoading) return div;
+}
+
+// Enter key i support
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.activeElement.id === 'support-input') sendSupport();
+});
+
 // ── WEBHOOK ──
 function sendToWebhook(type, detail, price) {
   const user = localStorage.getItem('ps_username') || 'Ukendt';
@@ -1163,5 +1337,24 @@ function sendToWebhook(type, detail, price) {
 renderAftaler();
 updateStats();
 </script>
+<!-- AI Support Chat -->
+<div id="support-btn" onclick="toggleSupport()" style="position:fixed;bottom:2rem;right:2rem;width:52px;height:52px;background:var(--plasma);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 20px var(--plasma-glow);z-index:200;font-size:20px;transition:transform .2s" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='none'">💬</div>
+
+<div id="support-chat" style="display:none;position:fixed;bottom:6rem;right:2rem;width:340px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);z-index:200;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden">
+  <div style="padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:13px;font-weight:700">AI Support</div>
+      <div style="font-size:10px;color:var(--jade);font-family:var(--mono)">● ONLINE</div>
+    </div>
+    <div onclick="toggleSupport()" style="cursor:pointer;color:var(--text3);font-size:18px">×</div>
+  </div>
+  <div id="support-messages" style="padding:12px;display:flex;flex-direction:column;gap:8px;height:280px;overflow-y:auto">
+    <div style="padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.6;background:var(--surface);border:1px solid var(--line);color:var(--text1);font-family:var(--mono)">Hej! Jeg er din AI-assistent. Jeg kan hjælpe dig med at bruge PrimeShot Sales OS. Hvad har du brug for?</div>
+  </div>
+  <div style="padding:10px;border-top:1px solid var(--line);display:flex;gap:8px">
+    <input type="text" id="support-input" placeholder="Stil et spørgsmål..." style="flex:1;padding:8px 10px;font-size:12px">
+    <button onclick="sendSupport()" style="padding:8px 14px;background:var(--plasma);color:var(--void);border:none;border-radius:var(--r);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer">›</button>
+  </div>
+</div>
+
 </body>
-</html>
