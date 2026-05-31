@@ -487,8 +487,7 @@ Noter fra samtale (Text) | Reaktion (Select) | Næste skridt (Text)</div>
 }
 
 // PrimeShot Webhook – sender data til Netlify → Make → Notion
-const PS_WEBHOOK = 'https://venerable-sorbet-f17a79.netlify.app/.netlify/functions/sales-webhook';
-
+const PS_WEBHOOK = 'https://hook.eu1.make.com/3139398';
 function sendToWebhook(type, detail, price) {
   const user = localStorage.getItem('ps_username') || 'Ukendt medarbejder';
   fetch(PS_WEBHOOK, {
