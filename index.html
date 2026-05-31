@@ -1147,77 +1147,82 @@ function stab(n, el) {
   if (n === 'aftaler') renderAftaler();
 }
 
-// ── O KNAP – VIRKSOMHEDSOPLYSNINGER ──
-const ADRESSER = {
-  'Sony Music Denmark': 'Langebrogade 6, 1411 København K',
-  'Universal Music DK': 'Vesterbrogade 26, 1620 København V',
-  'BoConcept': 'Mørupvej 16, 7400 Herning',
-  'Carlsberg Danmark': 'Valby Langgade 1, 2500 Valby',
-  'Arla Foods': 'Sønderhøj 14, 8260 Viby J',
-  'FC København': 'Øster Allé 50, 2100 København Ø',
-  'Lunar Bank': 'Hack Kampmanns Plads 10, 8000 Aarhus',
-  'Pleo Technologies': 'Ravnsborg Tværgade 5C, 2200 København N',
-  'SATS Denmark': 'Flæsketorvet 68, 1711 København V',
-  'Ganni Studio': 'Østergade 3, 1100 København K',
-};
-
-const TELEFONER = {
-  'Sony Music Denmark': '+45 33 12 34 56',
-  'Universal Music DK': '+45 33 98 76 54',
-  'BoConcept': '+45 97 26 13 00',
-  'Carlsberg Danmark': '+45 33 27 33 27',
-  'Arla Foods': '+45 89 38 10 00',
-};
-
-const CVR_DATA = {
-  'Sony Music Denmark': '12345678',
-  'Universal Music DK': '23456789',
-  'BoConcept': '13464010',
-  'Carlsberg Danmark': '61056416',
-  'Arla Foods': '25313763',
-  'Ganni Studio': '30764596',
-  'SATS Denmark': '25078100',
-};
-
-const OMSAETNING = ['5-10M kr','10-25M kr','25-50M kr','50-100M kr','100-500M kr','500M+ kr'];
-const ANSATTE = ['10-25','25-50','50-100','100-250','250-500','500+'];
-
+// ── O KNAP – VIRKSOMHEDSOPLYSNINGER VIA CVR API ──
 async function visOplysninger(id) {
   const l = mailMap[id];
   if (!l) return;
-  
+
   const modal = document.getElementById('arg-modal');
   const content = document.getElementById('arg-content');
   const name = document.getElementById('arg-firma-name');
-  
-  const adresse = ADRESSER[l.n] || l.by + ', Danmark';
-  const tlf = TELEFONER[l.n] || '+45 ' + Math.floor(10000000 + Math.random()*89999999);
-  const cvr = CVR_DATA[l.n] || Math.floor(10000000 + Math.random()*89999999).toString();
-  const oms = OMSAETNING[Math.floor(Math.random()*OMSAETNING.length)];
-  const ans = ANSATTE[Math.floor(Math.random()*ANSATTE.length)];
-  
-  name.textContent = l.n + ' · Virksomhedsprofil';
-  content.innerHTML = `<div style="line-height:2">
+
+  name.textContent = l.n + ' · Henter officielle data...';
+  content.innerHTML = '<div style="color:var(--text2);font-family:var(--mono);font-size:12px;padding:1rem">⏳ Søger i CVR-registret...</div>';
+  modal.classList.add('open');
+
+  try {
+    // Søg i den officielle danske CVR API (gratis, ingen nøgle nødvendig)
+    const søgning = encodeURIComponent(l.n);
+    const resp = await fetch(`https://cvrapi.dk/api?search=${søgning}&country=dk`);
+    const data = await resp.json();
+
+    if (data && data.name) {
+      const adresse = [data.address, data.zipcode, data.city].filter(Boolean).join(', ');
+      const tlf = data.phone || 'Ikke registreret';
+      const email = data.email || l.email;
+      const cvr = data.vat || 'Ikke fundet';
+      const ansatte = data.employees || 'Ikke oplyst';
+      const startaar = data.startdate ? data.startdate.split('-')[0] : 'Ukendt';
+
+      name.textContent = data.name + ' · Officielle CVR-data';
+      content.innerHTML = `<div style="line-height:2.2;font-size:12px">
 <span style="color:var(--plasma)">VIRKSOMHED</span><br>
-${l.n}<br><br>
+${data.name}<br><br>
 <span style="color:var(--plasma)">ADRESSE</span><br>
-${adresse}<br><br>
+${adresse || 'Ikke registreret'}<br><br>
 <span style="color:var(--plasma)">TELEFON</span><br>
 ${tlf}<br><br>
 <span style="color:var(--plasma)">EMAIL</span><br>
-${l.email}<br><br>
-<span style="color:var(--plasma)">BESLUTNINGSTAER</span><br>
-${l.kontakt}<br><br>
+${email}<br><br>
 <span style="color:var(--plasma)">CVR-NUMMER</span><br>
 ${cvr}<br><br>
 <span style="color:var(--plasma)">BRANCHE</span><br>
-${l.branche}<br><br>
+${data.industrycode_text || l.branche}<br><br>
+<span style="color:var(--plasma)">ANTAL ANSATTE</span><br>
+${ansatte}<br><br>
+<span style="color:var(--plasma)">GRUNDLAGT</span><br>
+${startaar}<br><br>
+<span style="color:var(--plasma)">BESLUTNINGSTAER (SALGSLEAD)</span><br>
+${l.kontakt}<br><br>
+<span style="color:var(--plasma)">EST. BUDGETRAMME</span><br>
+${l.p} kr<br><br>
+<span style="color:var(--jade);font-size:14px;font-weight:700">DIN PROVISION: ${Math.round(parseInt(l.p.replace('.',''))*0.15).toLocaleString('da')} kr</span>
+</div>`;
+    } else {
+      throw new Error('Ikke fundet');
+    }
+  } catch (err) {
+    // Fallback hvis CVR API ikke svarer
+    name.textContent = l.n + ' · Virksomhedsprofil';
+    content.innerHTML = `<div style="line-height:2.2;font-size:12px">
+<span style="color:var(--plasma)">VIRKSOMHED</span><br>
+${l.n}<br><br>
+<span style="color:var(--plasma)">EMAIL (SALGSLEAD)</span><br>
+${l.email}<br><br>
+<span style="color:var(--plasma)">BESLUTNINGSTAER</span><br>
+${l.kontakt}<br><br>
 <span style="color:var(--plasma)">BY</span><br>
 ${l.by}<br><br>
-<span style="color:var(--plasma)">EST. OMSÆTNING</span><br>
-${oms}<br><br>
-<span style="color:var(--plasma)">ANTAL ANSATTE</span><br>
-${ans}<br><br>
+<span style="color:var(--plasma)">BRANCHE</span><br>
+${l.branche}<br><br>
+<span style="color:var(--plasma)">EST. BUDGETRAMME</span><br>
+${l.p} kr<br><br>
+<span style="color:var(--jade);font-size:14px;font-weight:700">DIN PROVISION: ${Math.round(parseInt(l.p.replace('.',''))*0.15).toLocaleString('da')} kr</span><br><br>
+<span style="color:var(--text3);font-size:10px">⚠ CVR API svarede ikke – søg manuelt på virk.dk</span>
+</div>`;
+  }
+}
+
 <span style="color:var(--plasma)">SCORE</span><br>
 ${l.score}/100 — ${l.tier === 'hot' ? '🔥 Høj prioritet' : l.tier === 'warm' ? '⚡ Medium prioritet' : '❄️ Lav prioritet'}<br><br>
 <span style="color:var(--plasma)">EST. BUDGETRAMME</span><br>
@@ -1228,7 +1233,69 @@ ${l.p} kr<br><br>
   modal.classList.add('open');
 }
 
-// ── AI SUPPORT CHAT ──
+// ── MØDE ANMODNING FRA CHEF ──
+function tjekMødeAnmodning() {
+  const anmodning = localStorage.getItem('ps_møde_anmodning');
+  if (!anmodning) return;
+  const data = JSON.parse(anmodning);
+  if (data.set && !data.besvaret) {
+    visMødePopup(data);
+  }
+}
+
+function visMødePopup(data) {
+  const existing = document.getElementById('møde-popup');
+  if (existing) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'møde-popup';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    background:rgba(2,4,8,.7);
+    display:flex;align-items:center;justify-content:center;
+    animation:fadeIn .3s ease;
+  `;
+
+  overlay.innerHTML = `
+    <div style="background:var(--panel);border:1px solid var(--plasma);border-radius:16px;padding:32px;width:90%;max-width:400px;text-align:center;box-shadow:0 0 60px var(--plasma-glow)">
+      <div style="font-size:36px;margin-bottom:12px">📞</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--plasma);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px">Indgående møde-anmodning</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:6px">${data.chef || 'Din chef'}</div>
+      <div style="font-size:13px;color:var(--text2);font-family:var(--mono);margin-bottom:8px">${data.emne || 'Ønsker at holde et møde'}</div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:24px">${new Date().toLocaleTimeString('da-DK')}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button onclick="besvarMøde(false)" style="padding:14px;background:var(--ember-dim);border:1px solid rgba(255,80,64,.3);color:var(--ember);border-radius:10px;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.05em">✕ AFVIS</button>
+        <button onclick="besvarMøde(true)" style="padding:14px;background:var(--jade);border:none;color:var(--void);border-radius:10px;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.05em;box-shadow:0 0 20px rgba(0,229,160,.3)">✓ ACCEPTÉR</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+function besvarMøde(accepteret) {
+  const anmodning = JSON.parse(localStorage.getItem('ps_møde_anmodning') || '{}');
+  anmodning.besvaret = true;
+  anmodning.svar = accepteret ? 'accepteret' : 'afvist';
+  localStorage.setItem('ps_møde_anmodning', JSON.stringify(anmodning));
+
+  const popup = document.getElementById('møde-popup');
+  if (popup) popup.remove();
+
+  sendToWebhook('MØDE-SVAR', (accepteret ? '✓ Accepterede' : '✕ Afviste') + ' møde med chefen', 0);
+
+  if (accepteret) {
+    alert('✓ Du har accepteret mødet. Din chef er notificeret.');
+  }
+}
+
+// Tjek for møde-anmodninger hvert 5. sekund
+setInterval(tjekMødeAnmodning, 5000);
+tjekMødeAnmodning();
+
+
 let supportHistory = [];
 
 function toggleSupport() {
